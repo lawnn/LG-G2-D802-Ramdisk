@@ -67,21 +67,16 @@ service enable_uninstall  /system/vendor/bin/enable_uninstall.sh
 on property:vold.post_fs_data_done=1
     start enable_uninstall
 
-
-#Application Manager NTCODE_INSTALL
-service ntcode_install  /system/vendor/bin/ntcode_install.sh
+#CAPP_DEBUG_TOOLS
+service digicl /system/bin/digicl.sh
+    class main
     disabled
     oneshot
 
-#Application Manager NTCODE_INSTALL
-on property:persist.sys.first-mcc=*
-    start ntcode_install
-
-#Application Manager BOOT_RESOURCE
-service boot_resource  /system/vendor/bin/boot_resource.sh
+#CAPP_DEBUG_TOOLS
+service quickdump /system/bin/quickdump.sh
+    class main
     disabled
     oneshot
-
-#Application Manager BOOT_RESOURCE
-on property:vold.post_fs_data_done=1
-    start boot_resource
+    ioprio rt 0
+    keycodes 114 115 116
