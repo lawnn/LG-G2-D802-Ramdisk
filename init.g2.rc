@@ -63,7 +63,7 @@ on property:ro.blue_handler.level=3 # Only Support basic functionality.(popup & 
 
 
 # 2012.08.24 real-wifi@lge.com[wo0gi] TestMode Daemon for broadcom driver [START]
-service diagd /system/bin/diagd 
+service diagd /system/bin/diagd
 	class late_start
 	user root
 	group radio system
@@ -121,10 +121,10 @@ on property:sys.lge.touchfirmware.update=1
     setprop sys.lge.touchfirmware.update 2
 
 # bugreport is triggered by holding down volume down, volume up and power
-service bugreport /system/bin/bugmailer.sh -v
-    class main
-    disabled
-    oneshot
+#service bugreport /system/bin/bugmailer.sh -v
+#    class main
+#    disabled
+#    oneshot
 
 # Begin Immersion changes(donguk.ki@lge.com)
 service immvibed /system/bin/immvibed
@@ -133,4 +133,3 @@ service immvibed /system/bin/immvibed
     group shell
     oneshot
 # End Immersion changes
-

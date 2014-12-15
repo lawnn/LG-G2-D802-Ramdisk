@@ -84,6 +84,23 @@ on fs
 #   write /sys/devices/i2c-3/3-005b/update_fw 1
 #   start qcamerasvr
 
+    chmod 0755 /system/vendor/bin
+
+    # Fix audio decoder for sound driver in STOCK ROMS thanks to acer73@xda
+    setprop lpa.decode false
+    setprop ro.lpa.decode false
+
+    # ROM Tunings
+    setprop persist.adb.notify 0
+    setprop persist.service.adb.enable 1
+    setprop ro.lge.proximity.delay 5
+    setprop dalvik.vm.execution-mode int:jit
+    setprop ro.kernel.android.checkjni 0
+    setprop ro.kernel.checkjni 0
+    setprop ro.config.nocheckin 1
+    setprop ro.ril.disable.power.collapse 1
+    setprop pm.sleep_mode 1
+
 on post-fs-data
     mkdir /data/tombstones 0775 system system
     mkdir /tombstones/modem 0771 system system
@@ -112,11 +129,11 @@ on post-fs-data
     #Secureclock
     mkdir /persist-lg/secclk 0700 system system
     chown system system /persist-lg/secclk
-    chmod 0700 /persist-lg/secclk          
+    chmod 0700 /persist-lg/secclk
 
     # create dirs if not exist
-    mkdir /data/lgdrm 0770 lgdrm lgdrm_acc   
-# LGE_CHANGE_E For DRM   
+    mkdir /data/lgdrm 0770 lgdrm lgdrm_acc
+# LGE_CHANGE_E For DRM
 
 # LGE_CHANGE_S, [G2_Player][haewook.kim@lge.com], 20130301, for DivxDrm
     mkdir /persist-lg/multimedia 0770 media divxdrm
@@ -149,7 +166,7 @@ on post-fs-data
 #    stop bootlogo
 #    exec /sbin/chargerlogo
 
-# Allow usb charging to be disabled peristently
+# Allow usb charging to be disabled persistently
 on property:persist.usb.chgdisabled=1
     write /sys/class/power_supply/battery/charging_enabled 0
 
@@ -159,14 +176,14 @@ on property:persist.usb.chgdisabled=0
 # add for USB BC 1.2 event by the VZW chargerlogo
 on chargerlogo
    stop bootlogo
-   write /sys/class/android_usb/android0/enable 0   
-   write /sys/class/android_usb/android0/idVendor 1004   
-   write /sys/class/android_usb/android0/idProduct 6300   
-   write /sys/class/android_usb/android0/bDeviceClass 0   
-   write /sys/class/android_usb/android0/bDeviceSubClass 0   
-   write /sys/class/android_usb/android0/bDeviceProtocol 0   
-   write /sys/class/android_usb/android0/functions charge_only   
-   write /sys/class/android_usb/android0/enable 1  
+   write /sys/class/android_usb/android0/enable 0
+   write /sys/class/android_usb/android0/idVendor 1004
+   write /sys/class/android_usb/android0/idProduct 6300
+   write /sys/class/android_usb/android0/bDeviceClass 0
+   write /sys/class/android_usb/android0/bDeviceSubClass 0
+   write /sys/class/android_usb/android0/bDeviceProtocol 0
+   write /sys/class/android_usb/android0/functions charge_only
+   write /sys/class/android_usb/android0/enable 1
    exec /sbin/chargerlogo
 
 #start camera server as daemon
@@ -256,7 +273,7 @@ on property:ro.baseband="msm"
 #
 #on boot
 #   start preload
-    
+
 service usf_p2p /system/bin/usf_p2p
     user system
     group system inet
@@ -297,7 +314,9 @@ service imsqmidaemon /system/bin/imsqmidaemon
 
 on boot
     start imsqmidaemon
-    insmod /system/lib/modules/adsprpc.ko
+
+#   module moved to kernel
+#   insmod /system/lib/modules/adsprpc.ko
 
 # imsdatadaemon starts with root and UID will be downgraded to SYSTEM.
 service imsdatadaemon /system/bin/imsdatadaemon

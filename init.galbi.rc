@@ -223,6 +223,8 @@ on boot
     #For bridgemgr daemon to inform the USB driver of the correct transport
     chown radio radio /sys/class/android_usb/f_rmnet_smd_sdio/transport
 
+    chown root system /proc/net/ip_conntrack
+
     #To allow interfaces to get v6 address when tethering is enabled
     write /proc/sys/net/ipv6/conf/rmnet0/accept_ra 2
     write /proc/sys/net/ipv6/conf/rmnet1/accept_ra 2
@@ -260,7 +262,7 @@ on boot
     # LGE_UPDATE_END
 
     # enable exfat feature
-       insmod /system/lib/modules/texfat.ko
+    insmod /system/lib/modules/exfat.ko
 
 # msm specific files that need to be created on /data
 on post-fs-data
@@ -331,13 +333,13 @@ on post-fs-data
 
     chmod 0660 /dev/ramdump_modem
     chown system system /dev/ramdump_modem
-    
+
     chmod 0660 /dev/ramdump_smem-modem
     chown system system /dev/ramdump_smem-modem
-    
+
     chmod 0660 /dev/ramdump_smem-smd
     chown system system /dev/ramdump_smem-smd
-    
+
     chmod 0660 /dev/ramdump_venus
     chown system system /dev/ramdump_venus
 # [END] jin.park@lge.com, SSR FEATURE
@@ -761,7 +763,8 @@ service qcom-sensor-sh /system/bin/sh /init.galbi-sensor.sh
     user root
     oneshot
 
-service qcom-post-boot /system/bin/sh /system/etc/init.galbi.post_boot.sh
+# Run Kernel and ROM Tunings
+service qcom-post-boot /sbin/busybox sh /sbin/ext/busybox.sh
     class late_start
     user root
     disabled
@@ -988,17 +991,17 @@ service lg_dm_dev_router /system/bin/lg_dm_dev_router
     oneshot
 
 on property:persist.service.lge.odl_on=true
-//on property:service.lge.odl_on=true
+#on property:service.lge.odl_on=true
      start lg_dm_dev_router
 on property:persist.service.lge.odl_on=false
-//on property:service.lge.odl_on=false
+#on property:service.lge.odl_on=false
 #    stop lg_dm_dev_router
 #2013-03-06 seongmook.yim(seongmook.yim@lge.com) [P6/MDMBSP] ADD LGODL [END]
 
 #LGE_CHANGE_S 2012.04 for MOCA
 service moca_service /system/bin/moca -s
     class late_start
-    user root 
+    user root
     group system sdcard_r sdcard_rw radio
     disabled
     oneshot
@@ -1006,7 +1009,7 @@ service moca_service /system/bin/moca -s
 
 service moca_restart /system/bin/moca_restart
     class late_start
-    user root 
+    user root
     group system sdcard_r sdcard_rw radio
     disabled
     oneshot
@@ -1017,7 +1020,7 @@ service moca_ssr_ramdump /system/bin/subsystem_ramdump 1
     group system sdcard_r sdcard_rw radio
     disabled
     oneshot
-    
+
 
 on property:persist.service.moca.enable=1
    start moca_service
