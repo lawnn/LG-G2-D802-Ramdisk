@@ -4,7 +4,11 @@
 /			u:object_r:rootfs:s0
 
 # Data files
+<<<<<<< HEAD
 /adb_keys		u:object_r:adb_keys_file:s0
+=======
+/adb_keys		u:object_r:rootfs:s0
+>>>>>>> FETCH_HEAD
 /default.prop		u:object_r:rootfs:s0
 /fstab\..*		u:object_r:rootfs:s0
 /init\..*		u:object_r:rootfs:s0
@@ -15,6 +19,10 @@
 /charger		u:object_r:rootfs:s0
 /init			u:object_r:rootfs:s0
 /sbin(/.*)?		u:object_r:rootfs:s0
+<<<<<<< HEAD
+=======
+/sbin/busybox           u:object_r:rootfs:s0
+>>>>>>> FETCH_HEAD
 
 # Empty directories
 /lost\+found		u:object_r:rootfs:s0
@@ -150,6 +158,10 @@
 /system/xbin/su		u:object_r:su_exec:s0
 /system/vendor/bin/gpsd u:object_r:gpsd_exec:s0
 /system/bin/ping    u:object_r:ping_exec:s0
+<<<<<<< HEAD
+=======
+/system/xbin/wget       u:object_r:rootfs:s0
+>>>>>>> FETCH_HEAD
 /system/bin/dnsmasq     u:object_r:dnsmasq_exec:s0
 /system/bin/hostapd     u:object_r:hostapd_exec:s0
 /system/bin/clatd	u:object_r:clatd_exec:s0
@@ -178,22 +190,35 @@
 /data/local/tmp/selinux(/.*)?   u:object_r:tombstone_data_file:s0
 # Misc data
 /data/misc/bluetoothd(/.*)?	u:object_r:bluetoothd_data_file:s0
+<<<<<<< HEAD
 /data/misc/audio(/.*)?          u:object_r:audio_data_file:s0
+=======
+>>>>>>> FETCH_HEAD
 /data/misc/bluetooth(/.*)?	u:object_r:bluetooth_data_file:s0
 /data/misc/bluedroid(/.*)?	u:object_r:bluetooth_data_file:s0
 /data/misc/keystore(/.*)?	u:object_r:keystore_data_file:s0
 /data/misc/vpn(/.*)?		u:object_r:vpn_data_file:s0
 /data/misc/systemkeys(/.*)?	u:object_r:systemkeys_data_file:s0
 /data/misc/wifi(/.*)?		u:object_r:wifi_data_file:s0
+<<<<<<< HEAD
 /data/misc/camera(/.*)?	u:object_r:camera_data_file:s0
 /data/misc/dhcp(/.*)?           u:object_r:dhcp_data_file:s0
 /data/misc/adb(/.*)?            u:object_r:adb_keys_file:s0
+=======
+/data/misc/camera(/.*)?	u:object_r:camera_calibration_file:s0
+/data/misc/dhcp(/.*)?           u:object_r:dhcp_data_file:s0
+>>>>>>> FETCH_HEAD
 # App sandboxes
 /data/data/.*		u:object_r:app_data_file:s0
 # Wallpaper file.
 /data/data/com.android.settings/files/wallpaper	u:object_r:wallpaper_file:s0
 # Wallpaper file for other users
 /data/system/users/[0-9]+/wallpaper		u:object_r:wallpaper_file:s0
+<<<<<<< HEAD
+=======
+# Downloaded files
+/data/data/com.android.providers.downloads/cache u:object_r:download_file:s0
+>>>>>>> FETCH_HEAD
 #############################
 # efs files
 #
@@ -206,6 +231,11 @@
 /cache/.*\.restore	u:object_r:cache_backup_file:s0
 # LocalTransport (backup) uses this directory
 /cache/backup(/.*)?	u:object_r:cache_backup_file:s0
+<<<<<<< HEAD
+=======
+# FOTA package and log file
+/cache/fota(/.*)?	u:object_r:system_data_file:s0
+>>>>>>> FETCH_HEAD
 #############################
 # sysfs files
 #
@@ -213,6 +243,7 @@
 /sys/devices/platform/nfc-power/nfc_power -- u:object_r:sysfs_nfc_power_writable:s0
 /sys/class/rfkill/rfkill[0-9]*/state -- u:object_r:sysfs_bluetooth_writable:s0
 /sys/class/rfkill/rfkill[0-9]*/type -- u:object_r:sysfs_bluetooth_writable:s0
+<<<<<<< HEAD
 /sys/devices/system/cpu(/.*)?    u:object_r:sysfs_devices_system_cpu:s0
 /sys/power/wake_lock -- u:object_r:sysfs_wake_lock:s0
 /sys/power/wake_unlock -- u:object_r:sysfs_wake_lock:s0
@@ -236,3 +267,26 @@
 
 /data/hostapd(/.*)?         u:object_r:wifi_data_file:s0
 /data/misc/radio(/.*)?      u:object_r:radio_data_file:s0
+=======
+#############################
+# asec containers
+/mnt/asec(/.*)?         u:object_r:asec_apk_file:s0
+/data/app-asec(/.*)?    u:object_r:asec_image_file:s0
+#line 1 "vendor/lge/lge_security/sepolicy/sepolicy_kk/file_contexts"
+# GPU device
+/dev/kgsl-3d0       u:object_r:gpu_device:s0
+
+# IR device
+/dev/ttyHSL1        u:object_r:ir_device:s0
+
+# SMEM LOG device
+/dev/smem_log       u:object_r:smemlog_device:s0
+
+/data/system/lgmdm(/.*)?    u:object_r:lgmdm_data_file:s0
+
+/system/bin/ecryptfs-run u:object_r:ecryptfs_exec:s0
+/system/bin/ssbd    u:object_r:ssbd_exec:s0
+
+/system/bin/lgdrmserver        u:object_r:lgdrmserver_exec:s0
+/data/lgdrm(/.*)?     u:object_r:lgdrm_data_file:s0
+>>>>>>> FETCH_HEAD

@@ -34,7 +34,7 @@
 /dev/kgsl-2d0             0666   root       root
 /dev/kgsl-2d1             0666   root       root
 /dev/ion                  0664   system     system
-/dev/rtc0                 0660   system     system
+/dev/rtc0                 0600   system     system
 /dev/smd0                 0660   system     system
 /dev/smd4                 0660   system     system
 /dev/smd_cxm_qmi          0640   radio      radio
@@ -168,13 +168,25 @@
 /dev/felica_test          0666  root      root
 # LGE_CHANGE_S, 20130307, LGE-FeliCa@lge.com
 # LGE_CHANGE_S, [modemBSP][jin.park@lge.com], 2013-03-19, LGE MOCA driver
-/dev/lge_moca_drv0        0666   system     system
+/dev/lge_moca_drv0        0660   system     system
 # LGE_CHANGE_E, [modemBSP][jin.park@lge.com], 2013-03-19, LGE MOCA driver
 
 # Begin Immersion changes(donguk.ki@lge.com)
-/dev/tspdrv               0666   root       root
+/dev/tspdrv               0660   system       system
 # End Immersion changes
 /dev/lge_ddm_tty0         0660   system     system
+
+#[ePDG][START][changhwan.lee] reverse Rmnet Permission for ePDG
+/dev/smdcnt_rev0          0640   radio      radio
+/dev/smdcnt_rev1          0640   radio      radio
+/dev/smdcnt_rev2          0640   radio      radio
+/dev/smdcnt_rev3          0640   radio      radio
+/dev/smdcnt_rev4          0640   radio      radio
+/dev/smdcnt_rev5          0640   radio      radio
+/dev/smdcnt_rev6          0640   radio      radio
+/dev/smdcnt_rev7          0640   radio      radio
+/dev/smdcnt_rev8          0640   radio      radio
+#[ePDG][START][changhwan.lee] reverse Rmnet Permission for ePDG
 
 /dev/ttyHS99              0660   bluetooth  bluetooth
 /dev/block/mmcblk0p13     0660   system     wifi

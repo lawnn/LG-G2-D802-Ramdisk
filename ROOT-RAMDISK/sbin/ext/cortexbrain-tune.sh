@@ -16,7 +16,10 @@
 BB=/sbin/busybox
 
 # change mode for /tmp/
-mount -o remount,rw /;
+ROOTFS_MOUNT=$(mount | grep rootfs | cut -c26-27 | grep -c rw | wc -l)
+if [ "$ROOTFS_MOUNT" -eq "0" ]; then
+	mount -o remount,rw /;
+fi;
 chmod -R 777 /tmp/;
 
 # ==============================================================
@@ -24,7 +27,6 @@ chmod -R 777 /tmp/;
 # ==============================================================
 
 FILE_NAME=$0;
-PIDOFCORTEX=$$;
 # (since we don't have the recovery source code I can't change the ".dori" dir, so just leave it there for history)
 DATA_DIR=/data/.dori;
 
@@ -32,9 +34,24 @@ DATA_DIR=/data/.dori;
 # INITIATE
 # ==============================================================
 
+# For CHARGER CHECK.
+echo "1" > /data/dori_cortex_sleep;
+
 # get values from profile
 PROFILE=$(cat $DATA_DIR/.active.profile);
 . "$DATA_DIR"/"$PROFILE".profile;
+
+# start CROND by tree root, so it's will not be terminated.
+echo "1" > /data/.dori/cortex_cron;
+pkill -f "crond";
+/sbin/crond -c /var/spool/cron/crontabs/
+PIDOFCRON=$(pgrep -f "crond");
+echo "-900" > /proc/"$PIDOFCRON"/oom_score_adj;
+
+$BB sh /res/crontab_service/dm_job.sh "3:00" "/sbin/busybox sh /data/crontab/cron-scripts/database_optimizing.sh"
+$BB sh /res/crontab_service/dm_job.sh "4:00" "/sbin/busybox sh /data/crontab/cron-scripts/clear-file-cache.sh"
+$BB sh /res/crontab_service/dm_job.sh "4:50" "/sbin/busybox sh /data/crontab/cron-scripts/zipalign.sh"
+rm /data/.dori/cortex_cron;
 
 # ==============================================================
 # I/O-TWEAKS
@@ -68,16 +85,11 @@ IO_TWEAKS()
 		echo "45" > /proc/sys/fs/lease-break-time;
 
 		log -p i -t "$FILE_NAME" "*** IO_TWEAKS ***: enabled";
-
-		return 1;
 	else
 		return 0;
 	fi;
 }
-apply_cpu="$2";
-if [ "$apply_cpu" != "update" ]; then
-	IO_TWEAKS;
-fi;
+IO_TWEAKS;
 
 # ==============================================================
 # KERNEL-TWEAKS
@@ -101,10 +113,7 @@ KERNEL_TWEAKS()
 		echo "memory_tweaks disabled";
 	fi;
 }
-apply_cpu="$2";
-if [ "$apply_cpu" != "update" ]; then
-	KERNEL_TWEAKS;
-fi;
+KERNEL_TWEAKS;
 
 # ==============================================================
 # SYSTEM-TWEAKS
@@ -119,10 +128,7 @@ SYSTEM_TWEAKS()
 		echo "system_tweaks disabled";
 	fi;
 }
-apply_cpu="$2";
-if [ "$apply_cpu" != "update" ]; then
-	SYSTEM_TWEAKS;
-fi;
+SYSTEM_TWEAKS;
 
 # ==============================================================
 # MEMORY-TWEAKS
@@ -139,27 +145,22 @@ MEMORY_TWEAKS()
 		echo "4096" > /proc/sys/vm/min_free_kbytes;
 
 		log -p i -t "$FILE_NAME" "*** MEMORY_TWEAKS ***: enabled";
-
-		return 1;
 	else
 		return 0;
 	fi;
 }
-apply_cpu="$2";
-if [ "$apply_cpu" != "update" ]; then
-	MEMORY_TWEAKS;
-fi;
+MEMORY_TWEAKS;
 
 # if crond used, then give it root perent - if started by STweaks, then it will be killed in time
 CROND_SAFETY()
 {
 	if [ "$crontab" == "on" ]; then
-		pkill -f "crond";
-		/res/crontab_service/service.sh;
-
-		log -p i -t "$FILE_NAME" "*** CROND_SAFETY ***";
-
-		return 1;
+		if [ "$(pgrep -f crond | wc -l)" -eq "0" ]; then
+			$BB sh /res/crontab_service/service.sh > /dev/null;
+			log -p i -t "$FILE_NAME" "*** CROND STARTED ***";
+		else
+			log -p i -t "$FILE_NAME" "*** CROND IS ONLINE ***";
+		fi;
 	else
 		return 0;
 	fi;
@@ -177,8 +178,6 @@ IO_SCHEDULER()
 		if [ ! -e "$sys_mmc1_scheduler_tmp" ]; then
 			sys_mmc1_scheduler_tmp="/dev/null";
 		fi;
-
-		local ext_tmp_scheduler=$(cat "$sys_mmc1_scheduler_tmp" | sed -n 's/^.*\[\([a-z|A-Z]*\)\].*/\1/p');
 
 		if [ "$state" == "awake" ]; then
 			new_scheduler="$scheduler";
@@ -200,27 +199,70 @@ IO_SCHEDULER()
 
 CPU_CENTRAL_CONTROL()
 {
+	GOV_NAME=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor);
+
+	local state="$1";
+
 	if [ "$cortexbrain_cpu" == "on" ]; then
 
-		local state="$1";
-
 		if [ "$state" == "awake" ]; then
-			echo "$cpu_min_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq;
-			echo "$cpu_max_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq;
+			echo "$cpu0_min_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq;
+			echo "$cpu1_min_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_min_freq_cpu1;
+			echo "$cpu2_min_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_min_freq_cpu2;
+			echo "$cpu3_min_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_min_freq_cpu3;
+
+                        echo "$cpu0_max_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq;
+                        echo "$cpu1_max_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_max_freq_cpu1;
+                        echo "$cpu2_max_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_max_freq_cpu2;
+                        echo "$cpu3_max_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_max_freq_cpu3;
+			/res/uci.sh power_mode $power_mode > /dev/null;
 		elif [ "$state" == "sleep" ]; then
-			echo "$cpu_min_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq;
-			echo "$cpu_max_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq;
+			if [ "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq)" -ge "729600" ]; then
+				echo "$cpu0_min_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq;
+			fi;
+			if [ "$suspend_max_freq" -lt "2803200" ]; then
+				echo "$suspend_max_freq" > /sys/kernel/msm_cpufreq_limit/suspend_max_freq;
+			fi;
+			if [ -e /sys/devices/system/cpu/cpufreq/$GOV_NAME/sampling_rate ]; then
+				if [ "$(cat /sys/devices/system/cpu/cpufreq/$GOV_NAME/sampling_rate)" -lt "50000" ]; then
+					echo "50000" > /sys/devices/system/cpu/cpufreq/$GOV_NAME/sampling_rate;
+				fi;
+			fi;
 		fi;
-		return 1;
 		log -p i -t "$FILE_NAME" "*** CPU_CENTRAL_CONTROL max_freq:${cpu_max_freq} min_freq:${cpu_min_freq}***: done";
 	else
-		return 0;
+		if [ "$state" == "awake" ]; then
+			echo "$cpu0_min_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq;
+			echo "$cpu1_min_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_min_freq_cpu1;
+			echo "$cpu2_min_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_min_freq_cpu2;
+			echo "$cpu3_min_freq" > /sys/devices/system/cpu/cpufreq/all_cpus/scaling_min_freq_cpu3;
+			/res/uci.sh power_mode $power_mode > /dev/null;
+		elif [ "$state" == "sleep" ]; then
+			if [ "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq)" -ge "729600" ]; then
+				echo "$cpu0_min_freq" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq;
+			fi;
+			if [ -e /sys/devices/system/cpu/cpufreq/$GOV_NAME/sampling_rate ]; then
+				if [ "$(cat /sys/devices/system/cpu/cpufreq/$GOV_NAME/sampling_rate)" -lt "50000" ]; then
+					echo "50000" > /sys/devices/system/cpu/cpufreq/$GOV_NAME/sampling_rate;
+				fi;
+			fi;
+		fi;
 	fi;
 }
 
 HOTPLUG_CONTROL()
 {
+	if [ "$(pgrep -f "/system/bin/thermal-engine" | wc -l)" -eq "1" ]; then
+		$BB renice -n -20 -p "$(pgrep -f "/system/bin/thermal-engine")";
+	fi;
+
 	if [ "$hotplug" == "default" ]; then
+		if [ -e /system/bin/mpdecision ]; then
+			if [ "$(pgrep -f "/system/bin/mpdecision" | wc -l)" -eq "0" ]; then
+				/system/bin/start mpdecision
+				$BB renice -n -20 -p "$(pgrep -f "/system/bin/start mpdecision")";
+			fi;
+		fi;
 		if [ "$(cat /sys/kernel/intelli_plug/intelli_plug_active)" -eq "1" ]; then
 			echo "0" > /sys/kernel/intelli_plug/intelli_plug_active;
 		fi;
@@ -230,15 +272,20 @@ HOTPLUG_CONTROL()
 		if [ "$(cat /sys/module/msm_hotplug/msm_enabled)" -eq "1" ]; then
 			echo "0" > /sys/module/msm_hotplug/msm_enabled;
 		fi;
-		if [ "$(ps | grep "mpdecision" | wc -l)" -le "1" ]; then
-			/system/bin/start mpdecision
-			$BB renice -n -20 -p $(pgrep -f "/system/bin/start mpdecision");
-		fi;
-		if [ "$(ps | grep /system/bin/thermal-engine | wc -l)" -ge "1" ]; then
-			$BB renice -n -20 -p $(pgrep -f "/system/bin/thermal-engine");
+		if [ "$(cat /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable)" -eq "0" ]; then
+			echo "1" > /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable;
+			if [ -e /system/bin/mpdecision ]; then
+				/system/bin/stop mpdecision
+				/system/bin/start mpdecision
+				$BB renice -n -20 -p "$(pgrep -f "/system/bin/start mpdecision")";
+				echo "20" > /sys/devices/system/cpu/cpu0/rq-stats/run_queue_poll_ms;
+			else
+				# Some !Stupid APP! changed mpdecision name, not my problem. use msm hotplug!
+				echo "0" > /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable;
+				echo "1" > /sys/module/msm_hotplug/msm_enabled;
+			fi;
 		fi;
 	elif [ "$hotplug" == "msm_hotplug" ]; then
-		/system/bin/stop mpdecision
 		if [ "$(cat /sys/kernel/intelli_plug/intelli_plug_active)" -eq "1" ]; then
 			echo "0" > /sys/kernel/intelli_plug/intelli_plug_active;
 		fi;
@@ -248,25 +295,23 @@ HOTPLUG_CONTROL()
 		if [ "$(cat /sys/module/msm_hotplug/msm_enabled)" -eq "0" ]; then
 			echo "1" > /sys/module/msm_hotplug/msm_enabled;
 		fi;
-		if [ "$(ps | grep /system/bin/thermal-engine | wc -l)" -ge "1" ]; then
-			$BB renice -n -20 -p $(pgrep -f "/system/bin/thermal-engine");
+		if [ "$(cat /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable)" -eq "1" ]; then
+			echo "0" > /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable;
 		fi;
 	elif [ "$hotplug" == "intelli" ]; then
-		/system/bin/stop mpdecision
 		if [ "$(cat /sys/kernel/alucard_hotplug/hotplug_enable)" -eq "1" ]; then
 			echo "0" > /sys/kernel/alucard_hotplug/hotplug_enable;
-		fi;
-		if [ "$(cat /sys/kernel/intelli_plug/intelli_plug_active)" -eq "0" ]; then
-			echo "1" > /sys/kernel/intelli_plug/intelli_plug_active;
 		fi;
 		if [ "$(cat /sys/module/msm_hotplug/msm_enabled)" -eq "1" ]; then
 			echo "0" > /sys/module/msm_hotplug/msm_enabled;
 		fi;
-		if [ "$(ps | grep /system/bin/thermal-engine | wc -l)" -ge "1" ]; then
-			$BB renice -n -20 -p $(pgrep -f "/system/bin/thermal-engine");
+		if [ "$(cat /sys/kernel/intelli_plug/intelli_plug_active)" -eq "0" ]; then
+			echo "1" > /sys/kernel/intelli_plug/intelli_plug_active;
+		fi;
+		if [ "$(cat /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable)" -eq "1" ]; then
+			echo "0" > /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable;
 		fi;
 	elif [ "$hotplug" == "alucard" ]; then
-		/system/bin/stop mpdecision
 		if [ "$(cat /sys/kernel/intelli_plug/intelli_plug_active)" -eq "1" ]; then
 			echo "0" > /sys/kernel/intelli_plug/intelli_plug_active;
 		fi;
@@ -276,10 +321,26 @@ HOTPLUG_CONTROL()
 		if [ "$(cat /sys/kernel/alucard_hotplug/hotplug_enable)" -eq "0" ]; then
 			echo "1" > /sys/kernel/alucard_hotplug/hotplug_enable;
 		fi;
-		if [ "$(ps | grep /system/bin/thermal-engine | wc -l)" -ge "1" ]; then
-			$BB renice -n -20 -p $(pgrep -f "/system/bin/thermal-engine");
+		if [ "$(cat /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable)" -eq "1" ]; then
+			echo "0" > /sys/devices/system/cpu/cpu0/rq-stats/hotplug_enable;
 		fi;
 	fi;
+}
+
+WORKQUEUE_CONTROL()
+{
+	local state="$1";
+
+	if [ "$state" == "awake" ]; then
+		if [ "$power_efficient" == "on" ]; then
+			echo "1" > /sys/module/workqueue/parameters/power_efficient;
+		else
+			echo "0" > /sys/module/workqueue/parameters/power_efficient;
+		fi;
+	elif [ "$state" == "sleep" ]; then
+		echo "1" > /sys/module/workqueue/parameters/power_efficient;
+	fi;
+	log -p i -t "$FILE_NAME" "*** WORKQUEUE_CONTROL ***: done";
 }
 
 # ==============================================================
@@ -287,9 +348,17 @@ HOTPLUG_CONTROL()
 # ==============================================================
 AWAKE_MODE()
 {
-	IO_SCHEDULER "awake";
 	CPU_CENTRAL_CONTROL "awake";
-	log -p i -t "$FILE_NAME" "*** AWAKE_MODE - WAKEUP ***: done";
+
+	if [ "$(cat /data/dori_cortex_sleep)" -eq "1" ]; then
+		IO_SCHEDULER "awake";
+		HOTPLUG_CONTROL;
+		WORKQUEUE_CONTROL "awake";
+		echo "0" > /data/dori_cortex_sleep;
+		log -p i -t "$FILE_NAME" "*** AWAKE_MODE - WAKEUP ***: done";
+	else
+		log -p i -t "$FILE_NAME" "*** AWAKE_MODE - WAS NOT SLEEPING ***: done";
+	fi;
 }
 
 # ==============================================================
@@ -301,12 +370,20 @@ SLEEP_MODE()
 	PROFILE=$(cat "$DATA_DIR"/.active.profile);
 	. "$DATA_DIR"/"$PROFILE".profile;
 
-	CROND_SAFETY;
-	IO_SCHEDULER "sleep";
-	CPU_CENTRAL_CONTROL "sleep";
-	HOTPLUG_CONTROL;
+	CHARGER_STATE=$(cat /sys/class/power_supply/battery/charging_enabled);
 
-	log -p i -t "$FILE_NAME" "*** SLEEP mode ***";
+	CROND_SAFETY;
+
+	if [ "$CHARGER_STATE" -eq "0" ]; then
+		IO_SCHEDULER "sleep";
+		CPU_CENTRAL_CONTROL "sleep";
+		WORKQUEUE_CONTROL "sleep";
+		echo "1" > /data/dori_cortex_sleep;
+		log -p i -t "$FILE_NAME" "*** SLEEP mode ***";
+	else
+		echo "0" > /data/dori_cortex_sleep;
+		log -p i -t "$FILE_NAME" "*** NO SLEEP CHARGING ***";
+	fi;
 }
 
 # ==============================================================
@@ -337,25 +414,3 @@ else
 		echo "Cortex background process already running!";
 	fi;
 fi;
-
-# ==============================================================
-# Logic Explanations
-#
-# This script will manipulate all the system / cpu / battery behavior
-# Based on chosen STWEAKS profile+tweaks and based on SCREEN ON/OFF state.
-#
-# When User select battery/default profile all tuning will be toward battery save.
-# But user loose performance -20% and get more stable system and more battery left.
-#
-# When user select performance profile, tuning will be to max performance on screen ON.
-# When screen OFF all tuning switched to max power saving. as with battery profile,
-# So user gets max performance and max battery save but only on screen OFF.
-#
-# This script change governors and tuning for them on the fly.
-# Also switch on/off hotplug CPU core based on screen on/off.
-# This script reset battery stats when battery is 100% charged.
-# This script tune Network and System VM settings and ROM settings tuning.
-# This script changing default MOUNT options and I/O tweaks for all flash disks and ZRAM.
-#
-# TODO: add more description, explanations & default vaules ...
-#

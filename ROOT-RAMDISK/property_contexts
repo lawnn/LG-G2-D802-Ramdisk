@@ -55,3 +55,6 @@ crypto.                 u:object_r:vold_prop:s0
 ctl.dumpstate           u:object_r:ctl_dumpstate_prop:s0
 ctl.ril-daemon          u:object_r:ctl_rildaemon_prop:s0
 ctl.                    u:object_r:ctl_default_prop:s0
+#line 1 "vendor/lge/lge_security/sepolicy/sepolicy_kk/property_contexts"
+ctl.dumpreporter	u:object_r:ctldump_prop:s0
+sys.media.vdec.sw	u:object_r:sysmedia_prop:s0
