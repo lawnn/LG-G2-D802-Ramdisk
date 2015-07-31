@@ -85,9 +85,25 @@ on post-fs-data
     chmod 0660 /sys/devices/platform/lg_diag_cmd/diag_enable
 #LGE_CHANGE_E 2013.3.21 jaeho.cho@lge.com add change ownership and mode for diag_enable
 
-# [NFC_PORTING_FOR_DCM][S]
+# [NFC_PORTING_FOR_DCM_KDDI][S]
     mkdir /felica/cflock 0771 nfclock nfclock
-# [NFC_PORTING_FOR_DCM][E]
+
+    chown nfclock nfclock /felica/cflock/cfl_lock
+    chown nfclock nfclock /felica/cflock/cfl_passwd
+    chown nfclock nfclock /felica/cflock/cfl_remote
+    chown nfclock nfclock /felica/cflock/cfl_mdn
+    chown nfclock nfclock /felica/cflock/cfl_mdm
+    chown nfclock nfclock /felica/cflock/cfl_3lm
+# [NFC_PORTING_FOR_DCM_KDDI][E]
+
+# LGE_CHANGE_S, 20130723, [STB] daehwan.kim@lge.com, create persist-lg/stblvd
+#    mkdir /persist-lg/stblvd 0771 system system
+     mkdir /persist-lg/stblvd 0770 stb stb
+     chown stb stb /persist-lg/stblvd/dkp
+     chmod 770 /persist-lg/stblvd/dkp
+     chown stb stb /persist-lg/stblvd/srmp
+     chmod 770 /persist-lg/stblvd/srmp
+# LGE_CHANGE_E, 20130723, [STB] daehwan.kim@lge.com, create persist-lg/stblvd
 
 #LGE_CHANGE_S, [NFC][sungwook.ahn@lge.com], 2013-02-20, NFC Bring up
 symlink /dev/ttyHSL2 /dev/snfc_uart
@@ -105,20 +121,36 @@ on property:persist.sys.emmc_size=0
 on fs
     mkdir /felica 0775 system system
     mkdir /OneSeg 0771 system system
+    mkdir /seclog 0771 system system
 
     wait /dev/block/platform/msm_sdcc.1/by-name/felica
     exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/felica
     mount ext4 /dev/block/platform/msm_sdcc.1/by-name/felica /felica nosuid nodev barrier=1 noauto_da_alloc
 
+# LGE_CHANGE_S, 20131115, shawn.park@lge.com, sony nfc init [START]
+# Sony nfc init
+on fs
+    exec /sbin/nfcinit none
+
+on chargerlogo
+    exec /sbin/nfcinit charger_logo_set
+# LGE_CHANGE_S, 20131115, shawn.park@lge.com, sony nfc init [END]
+
+
     wait /dev/block/platform/msm_sdcc.1/by-name/OneSeg
     exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/OneSeg
     mount ext4 /dev/block/platform/msm_sdcc.1/by-name/OneSeg /OneSeg nodev nosuid barrier=1 noauto_da_alloc
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/seclog
+    exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/seclog
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/seclog /seclog nodev nosuid barrier=1 noauto_da_alloc
 
 on init
     # LGE_UPDATE_START, 2013/03/13, G2-FS@lge.com
     exec /sbin/setup_fs_static \
         /dev/block/platform/msm_sdcc.1/by-name/felica \
         /dev/block/platform/msm_sdcc.1/by-name/OneSeg \
+        /dev/block/platform/msm_sdcc.1/by-name/seclog \
         no_reboot
     # LGE_UPDATE_END
 
@@ -128,3 +160,65 @@ service smpl_count /system/bin/smpl_count
 	user root
 	oneshot
 #2013.05.30 LGE_CHANGE_E kijae.park@lge.com, SMPL count
+
+# LGE_CHANGE_S, [UICC][KDDI] changoh.kim Add uimmdl_server service
+service uimmdl_server /system/bin/uimmdl_server /dev/ttyGS0 /dev/hsic0
+    class late_start
+    user system
+    group radio
+    socket uimmdl_server stream 0660 radio system
+# LGE_CHANGE_E, [UICC][KDDI] changoh.kim Add uimmdl_server service
+
+# LGE_CHANGE_S, 20120704, bg80.song@lge.com Add Sysfs Permission Change Routine for AAT IrDA Test
+on property:sys.irdatest.enable=true
+    chmod 666 /dev/ttyHSL3
+
+on property:sys.irdatest.enable=false
+    chmod 660 /dev/ttyHSL3
+# LGE_CHANGE_E, 20120704, bg80.song@lge.com Add Sysfs Permission Change Routine for AAT IrDA Test
+
+# 2013.07.16 [jisun.jung@lge.com] LGIMS ipsec solution [START]
+service ipsecclient /system/bin/ipsecclient
+  class main
+  group system net_admin net_raw
+  disabled
+
+service ipsecstarter /system/bin/ipsecstarter
+  class main
+  user system
+  group system net_admin net_raw
+# 2013.07.16 [jisun.jung@lge.com] LGIMS ipsec solution [END]
+
+# LGE_CHANGE_S, 20130723, jeseung.yoo@lge.com, TTL check(STB) log daemon starting
+service ddtcps /system/bin/ddtcps
+    user root
+    group root
+
+on property:sys.boot_completed=1    
+    start ddtcps
+# LGE_CHANGE_E, 20130723, jeseung.yoo@lge.com, TTL check(STB)log daemon starting
+
+#LGE_CHANGE_S, 20130821 bg80.song@lge.com Charger AICL Porting
+service charger_monitor /system/bin/charger_monitor
+    user system
+    group system
+
+on charger-monitor
+    chown root system /sys/module/qpnp_charger/parameters/charger_monitor
+    chown root system /sys/module/qpnp_charger/parameters/usb_in_uv
+    chown root system /sys/module/qpnp_charger/parameters/vchg_uv
+    chown root system /sys/class/power_supply/battery/input_current_max
+    chown root system /sys/class/power_supply/battery/input_current_settled
+    chown root system /sys/class/power_supply/battery/voltage_min
+    chmod 0664 /sys/class/power_supply/battery/input_current_max
+    chmod 0664 /sys/class/power_supply/battery/input_current_settled
+    chmod 0664 /sys/class/power_supply/battery/voltage_min
+    chmod 0664 /sys/module/qpnp_charger/parameters/charger_monitor
+    start charger_monitor
+#LGE_CHANGE_E, 20130821 bg80.song@lge.com Charger AICL Porting
+# LGE_CHANGE_S, G2-FS@lge.com, 2013-10-30, fuse for external_SD
+service fuse_external_SD /system/bin/sdcard -u 1023 -g 1023 -w 1023 -d /mnt/media_rw/external_SD /storage/external_SD
+    class late_start
+    disabled
+# LGE_CHANGE_E, G2-FS@lge.com, 2013-10-30, fuse for external_SD
+
